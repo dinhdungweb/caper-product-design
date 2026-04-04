@@ -21,15 +21,28 @@
   (function() {
     try {
       const root = document.getElementById('designer-root');
-      const productJson = JSON.parse(root.dataset.productJson);
+      if (!root || !root.dataset.productJson) {
+          console.warn('Dữ liệu sản phẩm không tìm thấy hoặc chưa sẵn sàng.');
+          return;
+      }
+
+      const productData = JSON.parse(root.dataset.productJson);
       
+      if (!productData) {
+          console.warn('Dữ liệu Product JSON bị rỗng.');
+          return;
+      }
+
       window.ShopifyProduct = {
-        id: productJson.id,
-        title: productJson.title,
-        featured_image: productJson.featured_image,
-        variants: productJson.variants,
-        handle: productJson.handle,
-        options: productJson.options
+        id: productData.id || 0,
+        title: productData.title || 'Sản phẩm mẫu',
+        featured_image: productData.featured_image || '',
+        images: productData.images || [],
+        variants: productData.variants || [],
+        handle: productData.handle || '',
+        options: productData.options || [],
+        // Lấy API URL từ cấu hình của chủ shop
+        apiUrl: '{{ section.settings.api_base_url | default: "http://localhost:5000/api" }}'
       };
       
       console.log('Shopify Designer Bridge Loaded:', window.ShopifyProduct.title);

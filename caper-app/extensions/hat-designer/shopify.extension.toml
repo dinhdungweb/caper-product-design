@@ -1,0 +1,13 @@
+api_version = "2024-04"
+
+[[extensions]]
+name = "Hat Designer Block"
+handle = "hat-designer-block"
+type = "theme"
+
+[extensions.settings]
+[[extensions.settings.fields]]
+key = "api_base_url"
+type = "text"
+name = "API Backend URL (App Proxy)"
+default = "/apps/caper-designer/api"

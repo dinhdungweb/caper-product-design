@@ -19,15 +19,15 @@ const TECHNIQUES = [
   { id: 'engraving', name: 'Điêu khắc', description: 'Khắc laser lên chất liệu', icon: '🔥', priceAdd: 40000 },
 ];
 
-const API_URL = 'http://localhost:5000/api';
-
-const HAT_VIEWS = [
+const DEFAULT_VIEWS = [
   { id: 'front', name: 'Mặt trước', image: '/hat_front.png' },
   { id: 'side', name: 'Mặt bên', image: '/hat_side.png' },
   { id: 'back', name: 'Mặt sau', image: '/hat_back.png' },
 ];
 
 function App() {
+  const [hatViews, setHatViews] = useState(DEFAULT_VIEWS);
+  const [apiUrl, setApiUrl] = useState('http://localhost:5000/api');
   const [currentView, setCurrentView] = useState(0);
   const [viewDesigns, setViewDesigns] = useState<Record<string, any[]>>({
     'front': [], 'side': [], 'back': []
@@ -53,14 +53,30 @@ function App() {
   const designerRef = useRef<DesignerHandle>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Initialize Shopify data
+  useEffect(() => {
+    const shopify = (window as any).ShopifyProduct;
+    if (shopify) {
+        if (shopify.apiUrl) setApiUrl(shopify.apiUrl);
+        if (shopify.images && shopify.images.length > 0) {
+            const mapped = [
+                { id: 'front', name: 'Mặt trước', image: shopify.images[0] },
+                { id: 'side', name: 'Mặt bên', image: shopify.images[1] || shopify.images[0] },
+                { id: 'back', name: 'Mặt sau', image: shopify.images[2] || shopify.images[0] },
+            ];
+            setHatViews(mapped);
+        }
+    }
+  }, []);
+
   // Current view ID and its technique
-  const currentViewId = HAT_VIEWS[currentView].id;
+  const currentViewId = hatViews[currentView].id;
   const currentTechnique = viewTechniques[currentViewId];
 
   // Logic: Sum base price + (priceAdd of techniques for views that HAVE designs)
   const totalPrice = (() => {
     let extra = 0;
-    HAT_VIEWS.forEach(v => {
+    hatViews.forEach((v: any) => {
         const vTech = viewTechniques[v.id];
         const hasContent = (v.id === currentViewId ? layers.length > 0 : (viewDesigns[v.id]?.length > 0));
         if (hasContent && vTech) {
@@ -108,7 +124,7 @@ function App() {
     if (!designerRef.current) return;
     
     // 1. Save current view design + thumbnail
-    const currentViewId = HAT_VIEWS[currentView].id;
+    const currentViewId = hatViews[currentView].id;
     const currentObjects = designerRef.current.getObjectsJson();
     const currentPreview = designerRef.current.getPreviewImage();
     
@@ -128,7 +144,7 @@ function App() {
     setCurrentView(newIdx);
     
     // 3. Logic: If the next view is empty, show Technique List. If it has designs, show Design Tools.
-    const nextViewId = HAT_VIEWS[newIdx].id;
+    const nextViewId = hatViews[newIdx].id;
     const nextObjects = viewDesigns[nextViewId] || [];
     
     if (nextObjects.length === 0) {
@@ -155,7 +171,7 @@ function App() {
         if (preview) {
             setViewPreviews(prev => ({
                 ...prev,
-                [HAT_VIEWS[currentView].id]: preview
+                [hatViews[currentView].id]: preview
             }));
         }
     }
@@ -211,16 +227,16 @@ function App() {
     // 2. Prepare full package with all views synced
     const finalViews = {
         ...viewDesigns,
-        [HAT_VIEWS[currentView].id]: currentDesign.json
+        [hatViews[currentView].id]: currentDesign.json
     };
     const finalPreviews = {
         ...viewPreviews,
-        [HAT_VIEWS[currentView].id]: currentDesign.image
+        [hatViews[currentView].id]: currentDesign.image
     };
 
     setIsSaving(true);
     try {
-      const response = await axios.post(`${API_URL}/designs`, {
+      const response = await axios.post(`${apiUrl}/designs`, {
         views: finalViews,
         viewPreviews: finalPreviews,
         viewTechniques: viewTechniques,
@@ -279,14 +295,14 @@ function App() {
               ref={designerRef} 
               technique={currentTechnique?.id || ''} 
               patchOptions={patchOptions}
-              productImage={HAT_VIEWS[currentView].image}
+              productImage={hatViews[currentView].image}
               onSelection={setActiveObject}
               onLayersUpdate={handleLayersUpdate}
             />
         </div>
         
         <div className="view-selector-strip">
-          {HAT_VIEWS.map((v, idx) => (
+          {hatViews.map((v, idx) => (
             <button 
               key={v.id} 
               className={`view-thumb ${currentView === idx ? 'active' : ''}`}

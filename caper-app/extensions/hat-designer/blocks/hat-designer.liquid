@@ -1,0 +1,36 @@
+<div class="product-customizer-app-block" id="designer-root" 
+     style="min-height: 800px; width: 100%;"
+     data-product-json='{{ product | json | escape }}'>
+  <div style="display: flex; align-items: center; justify-content: center; height: 800px; background: #f8f9fa;">
+    <p>Loading Caper Designer...</p>
+  </div>
+</div>
+
+<script>
+  window.ShopifyProduct = {
+    id: {{ product.id | json }},
+    title: {{ product.title | json }},
+    featured_image: {{ product.featured_image | json }},
+    images: {{ product.images | json }},
+    variants: {{ product.variants | json }},
+    handle: {{ product.handle | json }},
+    options: {{ product.options | json }},
+    // App Proxy URL cố định cho App
+    apiUrl: "/apps/caper-designer/api"
+  };
+</script>
+
+{% schema %}
+{
+  "name": "Caper Hat Designer",
+  "target": "section",
+  "settings": [
+    {
+       "type": "product",
+       "id": "product",
+       "label": "Sản phẩm",
+       "autofill": true
+    }
+  ]
+}
+{% endschema %}

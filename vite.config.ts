@@ -6,10 +6,12 @@ import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js'
 export default defineConfig({
   plugins: [react(), cssInjectedByJsPlugin()],
   build: {
+    outDir: 'caper-app/extensions/hat-designer/assets',
+    emptyOutDir: false, // Don't wipe the assets folder if other things are there
     lib: {
         entry: 'src/main.tsx',
         name: 'ProductDesigner',
-        fileName: (format) => `designer-bundle.${format}.js`,
+        fileName: () => `designer-bundle.iife.js`,
         formats: ['iife']
     },
     rollupOptions: {
