@@ -1,0 +1,63 @@
+{% comment %}
+  product-designer.liquid
+  Cách dùng: 
+  1. Tải tệp 'designer-bundle.iife.js' lên thư mục Assets của Shopify.
+  2. Dán đoạn mã này vào Product Page hoặc thêm dưới dạng Section.
+{% endcomment %}
+
+<div class="product-customizer-container" id="designer-root" 
+     style="min-height: 800px; width: 100%; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.05); margin: 2rem 0;"
+     data-product-json='{{ product | json | escape }}'>
+  <!-- App sẽ tự động render vào đây -->
+  <div style="display: flex; align-items: center; justify-content: center; height: 800px; background: #f8f9fa;">
+    <p>Đang tải trình thiết kế...</p>
+  </div>
+</div>
+
+{{ 'designer-bundle.iife.js' | asset_url | script_tag }}
+
+<script>
+  // Cung cấp dữ liệu Sản phẩm Shopify cho ứng dụng React
+  (function() {
+    try {
+      const root = document.getElementById('designer-root');
+      const productJson = JSON.parse(root.dataset.productJson);
+      
+      window.ShopifyProduct = {
+        id: productJson.id,
+        title: productJson.title,
+        featured_image: productJson.featured_image,
+        variants: productJson.variants,
+        handle: productJson.handle,
+        options: productJson.options
+      };
+      
+      console.log('Shopify Designer Bridge Loaded:', window.ShopifyProduct.title);
+    } catch (e) {
+      console.error('Lỗi khởi tạo Product Designer:', e);
+    }
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Caper Product Designer",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Cấu hình Backend"
+    },
+    {
+      "type": "text",
+      "id": "api_base_url",
+      "label": "API URL (Backend)",
+      "default": "https://your-backend-url.com/api"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Caper Product Designer"
+    }
+  ]
+}
+{% endschema %}
