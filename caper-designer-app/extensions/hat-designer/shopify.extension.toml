@@ -1,4 +1,5 @@
 api_version = "2024-04"
+uid = "49a73b53-4a03-d95a-1997-bd0df6493da3a7cb16cb"
 
 [[extensions]]
 name = "Hat Designer Block"

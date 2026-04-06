@@ -1,0 +1,13 @@
+{
+  "name": "caper-custom-hat-designer",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@shopify/app": "^3.58.0",
+    "@shopify/cli": "^3.58.0"
+  },
+  "scripts": {
+    "shopify": "shopify",
+    "deploy": "shopify app deploy"
+  }
+}
