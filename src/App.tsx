@@ -7,8 +7,10 @@ import ContentSelector from './components/ContentSelector';
 import TextEditor from './components/TextEditor';
 import LayerManager from './components/LayerManager';
 import ConfirmModal from './components/ConfirmModal';
+import DesignAssistantPanel from './components/DesignAssistantPanel';
 import { RefreshCcw, Save, MessageSquare, ChevronLeft } from 'lucide-react';
 import axios from 'axios';
+import { useDesignAssistant } from './hooks/useDesignAssistant';
 import './index.css';
 
 const TECHNIQUES = [
@@ -52,6 +54,10 @@ function App() {
   const [basePrice] = useState(589000);
   const designerRef = useRef<DesignerHandle>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showAssistant, setShowAssistant] = useState(true);
+
+  // AI Design Assistant Hook - will be called after currentViewId is defined
+  const aiAssistant = useDesignAssistant(layers, '', showAssistant);
 
   // Initialize Shopify data
   useEffect(() => {
@@ -72,6 +78,16 @@ function App() {
   // Current view ID and its technique
   const currentViewId = hatViews[currentView].id;
   const currentTechnique = viewTechniques[currentViewId];
+
+  // Update AI assistant when currentViewId changes
+  useEffect(() => {
+    if (currentViewId) {
+      aiAssistant.updateViewId(currentViewId);
+    }
+  }, [currentViewId]);
+
+  // Destructure AI assistant values
+  const { score, suggestions, scoreColor, scoreLabel } = aiAssistant;
 
   // Logic: Sum base price + (priceAdd of techniques for views that HAVE designs)
   const totalPrice = (() => {
@@ -174,6 +190,19 @@ function App() {
                 [hatViews[currentView].id]: preview
             }));
         }
+    }
+  };
+
+  // Apply AI suggestion (e.g., auto-center object)
+  const handleApplySuggestion = (suggestion: any) => {
+    if (!designerRef.current || !activeObject) return;
+    
+    if (suggestion.left && suggestion.top) {
+      // Smart placement - move object to safe zone center
+      designerRef.current.selectObject(activeObject.id);
+      const canvas = designerRef.current as any;
+      // Note: This would need to be implemented in Designer component
+      console.log('Applying smart placement:', suggestion);
     }
   };
 
@@ -290,7 +319,7 @@ function App() {
           <button className="btn-u"><MessageSquare size={14} /> Phản hồi</button>
           <button className="btn-u"><Save size={14} /> Lưu</button>
         </div>
-        <div className="canvas-container">
+        <div className="canvas-container" style={{ position: 'relative' }}>
             <Designer 
               ref={designerRef} 
               technique={currentTechnique?.id || ''} 
@@ -298,7 +327,20 @@ function App() {
               productImage={hatViews[currentView].image}
               onSelection={setActiveObject}
               onLayersUpdate={handleLayersUpdate}
+              viewId={currentViewId}
             />
+            
+            {/* AI Design Assistant Panel */}
+            {showAssistant && !activeObject && (
+              <DesignAssistantPanel
+                score={score}
+                scoreLabel={scoreLabel}
+                scoreColor={scoreColor}
+                suggestions={suggestions}
+                onApplySuggestion={handleApplySuggestion}
+                isVisible={showAssistant}
+              />
+            )}
         </div>
         
         <div className="view-selector-strip">
