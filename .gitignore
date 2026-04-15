@@ -1,24 +1,14 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+```
+# Build artifacts
+caper-app/extensions/hat-designer/assets/*.js
+caper-app/extensions/hat-designer/assets/*.svg
+caper-app/extensions/hat-designer/assets/*.png
 
-node_modules
-dist
-dist-ssr
-*.local
+# Environment variables
+.env.local
+.env
+*.env.*
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# Dependencies
+node_modules/
+```
