@@ -23,6 +23,7 @@ interface Props {
   productImage?: string;
   onSelection?: (obj: any) => void;
   onLayersUpdate?: (layers: any[]) => void;
+  viewId?: string; // Unique identifier for each view (front/side/back)
 }
 
 // Custom Fabric Control: Trash Icon for object deletion
@@ -84,17 +85,79 @@ if ((fabric as any).FabricImage) applyDeleteControl((fabric as any).FabricImage)
 
 // Fixed patch mapping
 
-export const Designer = forwardRef<DesignerHandle, Props>(({ technique, patchOptions, productImage, onSelection, onLayersUpdate }, ref) => {
+export const Designer = forwardRef<DesignerHandle, Props>(({ technique, patchOptions, productImage, onSelection, onLayersUpdate, viewId }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
   const [patchObject, setPatchObject] = useState<fabric.Object | null>(null);
   const onSelectionRef = useRef(onSelection);
   const onLayersUpdateRef = useRef(onLayersUpdate);
+  const autoSaveTimerRef = useRef<number | null>(null);
 
   // Keep refs in sync with latest props
   useEffect(() => { onSelectionRef.current = onSelection; }, [onSelection]);
   useEffect(() => { onLayersUpdateRef.current = onLayersUpdate; }, [onLayersUpdate]);
+
+  // Auto-save functionality: Save design to localStorage every 5 seconds after changes
+  const saveToLocalStorage = (fCanvas: fabric.Canvas) => {
+    if (!viewId) return; // Only save if viewId is provided
+    
+    try {
+      const designData = {
+        json: fCanvas.toJSON(),
+        timestamp: Date.now(),
+        viewId
+      };
+      const storageKey = `caper_design_draft_${viewId}`;
+      localStorage.setItem(storageKey, JSON.stringify(designData));
+      console.log(`[Auto-Save] Design saved for view: ${viewId}`);
+    } catch (error) {
+      console.error('[Auto-Save] Error saving to localStorage:', error);
+    }
+  };
+
+  const scheduleAutoSave = (fCanvas: fabric.Canvas) => {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+    autoSaveTimerRef.current = setTimeout(() => {
+      saveToLocalStorage(fCanvas);
+    }, 5000); // Save 5 seconds after last change
+  };
+
+  // Load draft from localStorage on initialization
+  const loadDraftFromLocalStorage = async (fCanvas: fabric.Canvas, draftViewId: string) => {
+    try {
+      const storageKey = `caper_design_draft_${draftViewId}`;
+      const savedData = localStorage.getItem(storageKey);
+      
+      if (savedData) {
+        const parsed = JSON.parse(savedData);
+        if (parsed.json && parsed.json.objects) {
+          // Clear existing non-background objects
+          fCanvas.getObjects().forEach(obj => {
+            if (obj.get('name') !== 'background') {
+              fCanvas.remove(obj);
+            }
+          });
+          
+          // Load saved objects
+          await fabric.util.enlivenObjects(parsed.json.objects).then((objects) => {
+            (objects as fabric.FabricObject[]).forEach(obj => {
+              if (obj && typeof obj.setCoords === 'function') {
+                fCanvas.add(obj);
+              }
+            });
+            fCanvas.requestRenderAll();
+          });
+          
+          console.log(`[Auto-Save] Draft loaded for view: ${draftViewId}`);
+        }
+      }
+    } catch (error) {
+      console.error('[Auto-Save] Error loading draft:', error);
+    }
+  };
 
   useImperativeHandle(ref, () => ({
     getDesign: () => {
@@ -260,17 +323,34 @@ export const Designer = forwardRef<DesignerHandle, Props>(({ technique, patchOpt
     };
 
     fabricCanvas.on('object:added', (e: any) => {
-        if (e.target?.get('name') !== 'background') syncLayers();
+        if (e.target?.get('name') !== 'background') {
+            syncLayers();
+            scheduleAutoSave(fabricCanvas); // Trigger auto-save on object add
+        }
     });
     fabricCanvas.on('object:removed', (e: any) => {
-        if (e.target?.get('name') !== 'background') syncLayers();
+        if (e.target?.get('name') !== 'background') {
+            syncLayers();
+            scheduleAutoSave(fabricCanvas); // Trigger auto-save on object remove
+        }
     });
-    fabricCanvas.on('object:modified', syncLayers);
+    fabricCanvas.on('object:modified', () => {
+        syncLayers();
+        scheduleAutoSave(fabricCanvas); // Trigger auto-save on object modification
+    });
+
+    // Load draft from localStorage after initialization
+    if (viewId) {
+        loadDraftFromLocalStorage(fabricCanvas, viewId);
+    }
 
     return () => {
+        if (autoSaveTimerRef.current) {
+            clearTimeout(autoSaveTimerRef.current);
+        }
         fabricCanvas.dispose();
     }
-  }, []); // Static dependency to avoid "changed size" error
+  }, [viewId]); // Add viewId to dependencies to reload draft when view changes
 
   // Update product image if changed
   useEffect(() => {
@@ -388,6 +468,14 @@ export const Designer = forwardRef<DesignerHandle, Props>(({ technique, patchOpt
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!canvas || !e.target.files) return;
     const file = e.target.files[0];
+    
+    // Performance optimization: Limit file size to 5MB
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    if (file.size > MAX_FILE_SIZE) {
+      alert('File size exceeds 5MB. Please choose a smaller image.');
+      return;
+    }
+    
     const reader = new FileReader();
     reader.onload = (f) => {
       fabric.FabricImage.fromURL(f.target?.result as string).then((img) => {
@@ -399,6 +487,7 @@ export const Designer = forwardRef<DesignerHandle, Props>(({ technique, patchOpt
         } as any);
         canvas.add(img);
         canvas.setActiveObject(img);
+        // Auto-save will be triggered by object:added event
       });
     };
     reader.readAsDataURL(file);
